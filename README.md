@@ -10,6 +10,7 @@ The general framework consists of:
 7. Pancakeswap Trading Bot
  
 Multiple paths have been tested and are available:
-1. With Pandas
-2. With Dask on the CPU
-3. With Dask on the GPU
+1. With Pandas and Multiprocessing
+2. With Pandas and Dask Distributor
+3. With Dask on the CPU
+4. With Dask on the GPU
