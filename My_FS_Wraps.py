@@ -37,7 +37,6 @@ import dask.dataframe as dd
     # Notes:
     #     - Uses local multiprocessing
 def SF_Pandas_v1(features, timeframe=1, forecast_periods=1, p_value=0.05, target='prices ethereum', LR=False, Vol=False):
-    # Feature selection on Pandas dataframe with Tsfresh
     target_var = features[target]
     features['LR(%)']= np.log(target_var)- np.log(target_var.shift(1))
     features['LR(%)']=features['LR(%)']*100
@@ -75,34 +74,6 @@ def SF_Pandas_v1(features, timeframe=1, forecast_periods=1, p_value=0.05, target
     #     - Optimized for distributed processing
     #     - Persists intermediate results
     #     - Partition-wise computation
-# def SF_Dask_v1(features, timeframe=1, forecast_periods=1, p_value=0.05, target='prices ethereum',LR=False, Vol=False):
-#     features['LR(%)']= np.log(features[target])- np.log(features[target].shift(1))
-#     features['LR(%)']= features['LR(%)']*100
-#     features['1PeriodVol(%)']= abs(features['LR(%)'])
-#     if LR== True: target_var= features['LR(%)']
-#     elif Vol== True: target_var= features['1PeriodVol(%)']
-#     else: target_var= target_var =features[target]
-#     features['y_future']= target_var.shift(-forecast_periods)
-#     features[['LR(%)','y_future','prices ethereum','1PeriodVol(%)']].tail(30).plot(subplots=True, figsize= (25, 25))
-#     FC= features.dropna(subset='y_future')
-#     FC = FC.map_partitions(impute)
-#     func = lambda x: select_features(x.drop('y_future', axis=1), x['y_future'], fdr_level=p_value, hypotheses_independent=False, n_jobs=1, ml_task='regression', chunksize='none').columns.tolist()
-#     selected_features = FC.map_partitions(func, meta=FC.dtypes, enforce_metadata=False)
-#     count=0
-#     for i in selected_features:
-#         if count==0: sf = i
-#         else: sf = sf + i
-#         count=count+1
-#     sf= pd.Series(sf)
-#     sf= sf[sf.duplicated()==True].unique().tolist()
-#     sf.append('y_future')
-#     if target_var.columns[0] != target: sf.append(target)
-#     if target_var.columns[0] != 'LR(%)': sf.append('LR(%)')
-#     if target_var.columns[0] != '1PeriodVol(%)':sf.append('1PeriodVol(%)')
-#     if len (sf) <= 5: print('not_enough_sig_feat')
-#     if len(sf) == len(FC.columns): print('all features kept')
-#     else: print('enough_sig_feat')
-#     return FC[sf]
 def SF_Dask_v1(features, timeframe=1, p_value=0.05, LR=False, Vol=False,target='prices ethereum'):
     features= features.dropna(subset='y_future')
     features= features.map_partitions(impute)
