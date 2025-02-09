@@ -6,7 +6,7 @@ This is project was conceived with the intention of deriving a forecast of Ether
 2. Data Rolling & Feature Extraction with TsFresh using functions available in My_FE_Wraps https://tsfresh.readthedocs.io/en/latest/text/introduction.html. My feature extraction functions return the data in a pivoted format- relative to the API wraps output- that is neccesary for the feature selection process in the next step;
  2a. WIP- (Optional) Adding Additional Features (macroeconomic, tokenomics, social metrics...): in the process of updating functions available in My_FE_Wraps.
 4. Feature Selection with TsFresh with functions available in My_FS_Wraps.  
-5. Preliminary XgBoost model & Hyperparameter tuning of Model with RandomGridSearch or Optuna with functions available in My_ML_Functions
+5. Preliminary XgBoost model & Hyperparameter tuning of Model with RandomGridSearch or Optuna (Example in crypto price action notebook).
 6. Final Model- Visualization & Recording of Results 
 7. Pancakeswap Trading Bot-> In progress...
 
