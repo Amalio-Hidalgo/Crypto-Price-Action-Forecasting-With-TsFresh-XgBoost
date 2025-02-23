@@ -66,7 +66,7 @@ def CoinGecko_HSPD_Pandas(timeframe, top_coins, periods, api_key, timezone='CET'
 #     timezone: timezone in pandas recognizable format (e.g. 'CET', 'UTC', 'CET1', 'UTC5')
 # Returns:
 #     pandas.DataFrame: Melted long format DataFrame with datetime index, containing price, market cap, and volume data
-def CoinGecko_HSPD_Dask(timeframe, top_coins, periods, api_key, timezone='CET', splits=5):
+def CoinGecko_HSPD_Dask(timeframe, top_coins, periods, api_key, timezone='CET'):
     headers = {
     "accept": "application/json",
     "x-cg-demo-api-key": api_key
@@ -90,7 +90,7 @@ def CoinGecko_HSPD_Dask(timeframe, top_coins, periods, api_key, timezone='CET', 
         count= count+1
     output= output.reset_index().melt('datetime').sort_values(['variable','datetime'])
     output['datetime']= output['datetime'].dt.tz_convert(timezone)
-    output = output.repartition(npartitions= splits)
+    # output = output.repartition(npartitions= splits)
     return output
 
 
