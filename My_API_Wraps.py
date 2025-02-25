@@ -1,32 +1,35 @@
-# CoinGecko API Wrapper Module:
-# This module provides wrapper functions for accessing CoinGecko cryptocurrency data. 
-# Main Functions (1&2) use others to gather price data into melted long format Pandas or Dask DataFrames.
-# Outputs are in the right format for data rolling and feature extraction with TsFresh.
+"""Cryptocurrency Data Collection Module
 
-# Dependencies:
-#     - pandas
-#     - requests
-#     - datetime
-#     - dask (for distributed computing)
-import requests, time 
+This module provides functions to fetch historical cryptocurrency data.
+Supports both Pandas and Dask DataFrame output formats with CoinGecko API.
+"""
+
+# Core data processing
 import pandas as pd
-import datetime as dt
 import dask.dataframe as dd
+import numpy as np
+import datetime as dt
+import requests
 
-# 1. CoinGecko Historical Price Data- Pandas  
-# Creates a melted (long format) Pandas DataFrame sharing a resampled index converted to your timezone.
-# Parameters:
-#     timeframe (int): Historical data period in days
-#     top_coins (int): Number of top coins by market cap to include
-#     periods (int): Resampling period:
-        # Adjust periods to increase or decrease granularity without losing regularity of time intervals/ homogenous timestamp spacing. 
-        # If timeframe = 1, CoinGecko defaults to 5min granularity, else 1hr.
-        # (eg:timeframe =1, periods=3->15min gran., timeframe=50, periods=4->4hr gran.)
-#     api_key (str): CoinGecko API key
-#     timezone: timezone in pandas recognizable format (e.g. 'CET', 'UTC', 'CET1', 'UTC5')
-# Returns:
-#     pandas.DataFrame: Melted long format DataFrame with datetime index, containing price, market cap, and volume data
-def CoinGecko_HSPD_Pandas(timeframe, top_coins, periods, api_key, timezone='CET'):
+# Constants
+DEFAULT_TIMEFRAME = 1
+DEFAULT_TOP_COINS = 8
+DEFAULT_PERIODS = 1
+timezone = 'CET'
+
+def CoinGecko_HSPD_Pandas(timeframe=DEFAULT_TIMEFRAME, top_coins=DEFAULT_TOP_COINS, 
+                          periods=DEFAULT_PERIODS, api_key=None):
+    """Fetch historical crypto data using Pandas
+    Args:
+        timeframe (int): Historical data period in days
+        top_coins (int): Number of top cryptocurrencies to fetch
+        periods (int): Resampling frequency multiplier:
+            - For timeframe <= 1: periods * 5min intervals
+            - For timeframe > 1: periods * 1h intervals
+        api_key (str): Optional CoinGecko API key
+    Returns:
+        pandas.DataFrame: Long format DataFrame with columns [datetime, variable, value, id]
+    """
     headers = {
     "accept": "application/json",
     "x-cg-demo-api-key": api_key
@@ -53,20 +56,19 @@ def CoinGecko_HSPD_Pandas(timeframe, top_coins, periods, api_key, timezone='CET'
         count=count+1
     return output.melt(ignore_index=False).reset_index(drop=False)
 
-# 2. CoinGecko-Dask: Historical Price Data for All Coins Collected Into Flat Dask DataFrame Sharing Resampled Index 
-# Creates Dask Distributed DataFrame with/without resampled historical price data using previous functions
-# Parameters:
-#     timeframe (int): Historical data period in days
-#     top_coins (int): Number of top coins by market cap to include
-#     periods (int): Resampling period:
-        # Adjust periods to increase or decrease granularity without losing regularity of time intervals/ homogenous timestamp spacing. 
-        # If timeframe = 1, CoinGecko defaults to 5min granularity, else 1hr.
-        # (eg:timeframe =1, periods=3->15min gran., timeframe=50, periods=4->4hr gran.)
-#     api_key (str): CoinGecko API key
-#     timezone: timezone in pandas recognizable format (e.g. 'CET', 'UTC', 'CET1', 'UTC5')
-# Returns:
-#     pandas.DataFrame: Melted long format DataFrame with datetime index, containing price, market cap, and volume data
-def CoinGecko_HSPD_Dask(timeframe, top_coins, periods, api_key, timezone='CET'):
+def CoinGecko_HSPD_Dask(timeframe=DEFAULT_TIMEFRAME, top_coins=DEFAULT_TOP_COINS, 
+                        periods=DEFAULT_PERIODS, api_key=None):
+    """Fetch historical crypto data using Dask
+    Args:
+        timeframe (int): Historical data period in days
+        top_coins (int): Number of top cryptocurrencies to fetch
+        periods (int): Resampling frequency multiplier:
+            - For timeframe <= 1: periods * 5min intervals
+            - For timeframe > 1: periods * 1h intervals
+        api_key (str): Optional CoinGecko API key
+    Returns:
+        dask.DataFrame: Long format DataFrame with columns [datetime, variable, value, id]
+    """
     headers = {
     "accept": "application/json",
     "x-cg-demo-api-key": api_key
@@ -93,45 +95,52 @@ def CoinGecko_HSPD_Dask(timeframe, top_coins, periods, api_key, timezone='CET'):
     # output = output.repartition(npartitions= splits)
     return output
 
-
-# Supporting Functions//
-# CoinGecko Historical Price Data- JSON
-# Fetches historical price data from CoinGecko API in JSON format.
-# Parameters:
-#     coin (str): Cryptocurrency CoinGecko ID 
-#     (e.g.'bitcoin', 'ethereum', 'ripple', 'tether', 'solana')
-#     headers (dict): API request headers including authentication 
-#     (e.g. {"accept": "application/json", "x-cg-demo-api-key": api_key})
-#     timeframe (int): Historical data period in days (default: 1) 
-# **Important Note: CoinGecko only offers 5min granularity for 1 Day timeframe and no hourly data past timeframe= 89
-# Returns:
-#     dict: JSON response containing price, market cap, and volume data
 def Coingecko_HSPD_Json(coin, headers, timeframe):
-    start= int(dt.datetime.now().timestamp())
-    end= int((dt.datetime.now() - dt.timedelta(days=timeframe)).timestamp())
-    url = f"https://api.coingecko.com/api/v3/coins/"+ coin + f"/market_chart/range?vs_currency=usd&from={end}&to={start}"
-    return  requests.get(url, headers=headers).json()
-# CoinGecko:ID Map- Pandas
-# Fetches historical price data from CoinGecko API in JSON format.
-# Parameters:
-#     coin (str): Cryptocurrency identifier (e.g., 'bitcoin')
-#     headers (dict): API request headers including authentication
-#     timeframe (int): Historical data period in days (default: 1)
-# Returns:
-#     dict: JSON response containing price, market cap, and volume data
+    """Fetch historical price data from CoinGecko API in JSON format
+    
+    Args:
+        coin (str): Cryptocurrency CoinGecko ID (e.g. 'bitcoin', 'ethereum')
+        headers (dict): API request headers with authentication
+        timeframe (int): Historical data period in days
+        
+    Note:
+        CoinGecko limits:
+        - 5min granularity only for 1 day timeframe
+        - No hourly data past 89 days
+        
+    Returns:
+        dict: JSON response with price, market cap, and volume data
+    """
+    start = int(dt.datetime.now().timestamp())
+    end = int((dt.datetime.now() - dt.timedelta(days=timeframe)).timestamp())
+    url = f"https://api.coingecko.com/api/v3/coins/{coin}/market_chart/range?vs_currency=usd&from={end}&to={start}"
+    return requests.get(url, headers=headers).json()
+
 def CoinGecko_IDs_Pandas(coins, headers):
+    """Map cryptocurrency names to CoinGecko IDs
+    
+    Args:
+        coins (list): List of cryptocurrency names
+        headers (dict): API request headers with authentication
+    
+    Returns:
+        pandas.DataFrame: ID mapping for requested coins
+    """
     url = "https://api.coingecko.com/api/v3/coins/list"
     response = requests.get(url, headers=headers)
     id_map = pd.DataFrame(response.json()).set_index('name')
     return id_map.loc[coins]
-# CoinGecko: Top Coins by MarketCap- Pandas
-# Fetches CoinGecko ids of top n coins from  API in JSON format.
-# Parameters:
-#     number (int): Cryptocurrency identifier (e.g., 'bitcoin')
-#     headers (dict): API request headers including authentication
-# Returns:
-#     Pandas df of response containing ids of top n coins by MarketCap
+
 def CoinGecko_TopCoinsMC_Pandas(number, headers):
+    """Get top cryptocurrencies by market cap
+    
+    Args:
+        number (int): Number of top coins to retrieve
+        headers (dict): API request headers with authentication
+    
+    Returns:
+        numpy.ndarray: Array of CoinGecko IDs for top coins
+    """
     url = "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd"
     response = pd.DataFrame(requests.get(url, headers=headers).json())
     investment_universe = response.head(number)['id'].values
